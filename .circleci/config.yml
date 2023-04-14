@@ -27,9 +27,15 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Authenticate docker"
+          command: docker login --username=santehuh --password="$DOCKER_HUB_PASSWORD"
+      - run:
           name: "Build docker image"
-          command: "docker build -t test ."
-      - setup_remote_docker
+          command: |
+            ID=$(docker build --quiet -t ${IMAGE} .)
+            docker tag ${ID} "${IMAGE}:${CIRCLE_TAG}"
+            docker tag ${ID} ${IMAGE}:latest
+      - run: docker push santehuh/hello-world:latest
       - run:
           name: "Releasing"
           command: "echo New release $CIRCLE_TAG!"
