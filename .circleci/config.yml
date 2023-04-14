@@ -17,10 +17,46 @@ jobs:
       - run:
           name: "Say hello"
           command: "echo Hello, World!"
+  release:
+    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
+    # See: https://circleci.com/docs/configuration-reference/#executor-job
+    docker:
+      - image: cimg/base:stable
+    # Add steps to the job
+    # See: https://circleci.com/docs/configuration-reference/#steps
+    steps:
+      - checkout
+      - run:
+          name: "Authenticate docker"
+          command: docker login --username=santehuh --password="$DOCKER_HUB_PASSWORD"
+      - setup_remote_docker
+      - run:
+          name: "Build docker image"
+          command: |
+            ID=$(docker build --quiet -t santehuh/hello-world .)
+            docker tag ${ID} "santehuh/hello-world:${CIRCLE_TAG}"
+            docker tag ${ID} santehuh/hello-world:latest
+      - run: docker push santehuh/hello-world:latest
+      - run:
+          name: "Releasing"
+          command: "echo New release $CIRCLE_TAG!"
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows
 workflows:
   say-hello-workflow:
     jobs:
-      - say-hello
+      - say-hello # This workflow will run on all commits
+  release: # This workflow will only run on tags (specifically starting with 'v.') and will not run on branches
+    jobs:
+      - say-hello:
+          filters: &filters-release # this yaml anchor is setting these values to "filters-production"
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+      - release:
+          requires:
+            - say-hello
+          filters:
+            <<: *filters-release # this is calling the previously set yaml anchor
