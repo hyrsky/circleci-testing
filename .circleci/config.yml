@@ -35,13 +35,17 @@ jobs:
 workflows:
   say-hello-workflow:
     jobs:
-      - say-hello
+      - say-hello # This workflow will run on all commits
+  release: # This workflow will only run on tags (specifically starting with 'v.') and will not run on branches
+    jobs:
+      - say-hello:
+          filters: &filters-release # this yaml anchor is setting these values to "filters-production"
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
       - release:
           requires:
             - say-hello
           filters:
-            tags:
-              only: /^v.*/
-            branches:
-              only:
-                - main
+            <<: *filters-release # this is calling the previously set yaml anchor
